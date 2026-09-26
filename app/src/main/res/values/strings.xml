@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">AttendEase</string>
+    <string name="nav_groups">Groups</string>
+    <string name="nav_sessions">Sessions</string>
+    <string name="nav_analytics">Analytics</string>
+    <string name="nav_export">Export &amp; Reports</string>
+</resources>
