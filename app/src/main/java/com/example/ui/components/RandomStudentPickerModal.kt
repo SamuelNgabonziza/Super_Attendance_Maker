@@ -21,13 +21,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.example.data.model.Member
+import com.example.data.local.entity.MemberEntity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
 fun RandomStudentPickerModal(
-    members: List<Member>,
+    members: List<MemberEntity>,
     onDismiss: () -> Unit
 ) {
     var pickedMember by remember { mutableStateOf(members.randomOrNull()) }
@@ -49,10 +49,6 @@ fun RandomStudentPickerModal(
         }
     }
 
-    LaunchedEffect(Unit) {
-        shuffle()
-    }
-
     Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(24.dp),
@@ -63,7 +59,9 @@ fun RandomStudentPickerModal(
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(24.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -74,33 +72,40 @@ fun RandomStudentPickerModal(
                         Icon(
                             imageVector = Icons.Default.Casino,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Random Student Picker",
+                            text = "Random Student Selector",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
                         Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
                     }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                pickedMember?.let { member ->
+                if (members.isEmpty()) {
+                    Text(
+                        text = "No students in this group yet",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                } else {
                     Box(
                         modifier = Modifier
                             .scale(scaleAnim.value)
-                            .size(90.dp)
+                            .size(100.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = member.fullName.take(2).uppercase(),
+                            text = pickedMember?.name?.take(2)?.uppercase() ?: "??",
                             fontSize = 32.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -110,51 +115,40 @@ fun RandomStudentPickerModal(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = member.fullName,
+                        text = pickedMember?.name ?: "Unknown",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
 
-                    if (member.identifier.isNotEmpty()) {
+                    if (!pickedMember?.identifier.isNullOrBlank()) {
                         Text(
-                            text = member.identifier,
+                            text = "ID: ${pickedMember?.identifier}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
 
-                    Text(
-                        text = member.role,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                } ?: run {
-                    Text("No members available to pick.")
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Done")
-                    }
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     Button(
                         onClick = { shuffle() },
                         enabled = !isShuffling && members.isNotEmpty(),
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (isShuffling) "Picking..." else "Pick Next")
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (isShuffling) "Picking..." else "Pick Another Student",
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }

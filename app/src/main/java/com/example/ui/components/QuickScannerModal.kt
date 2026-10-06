@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,28 +17,27 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.example.data.model.AttendanceStatus
-import com.example.data.model.Member
+import com.example.data.local.entity.MemberEntity
 import com.example.ui.theme.StatusLate
 import com.example.ui.theme.StatusPresent
+import com.example.ui.viewmodel.AttendanceStatus
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 @Composable
 fun QuickScannerModal(
-    members: List<Member>,
-    onCheckInMember: (memberId: String, status: AttendanceStatus, timeStr: String) -> Unit,
+    members: List<MemberEntity>,
+    onCheckInMember: (memberId: Long, status: AttendanceStatus, timeStr: String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var scannedQuery by remember { mutableStateOf("") }
-    var lastCheckedInMember by remember { mutableStateOf<Pair<Member, String>?>(null) }
+    var lastCheckedInMember by remember { mutableStateOf<Pair<MemberEntity, String>?>(null) }
     var markAsLate by remember { mutableStateOf(false) }
 
     val filteredMembers = remember(scannedQuery, members) {
@@ -47,9 +45,9 @@ fun QuickScannerModal(
             members
         } else {
             members.filter {
-                it.fullName.contains(scannedQuery, ignoreCase = true) ||
+                it.name.contains(scannedQuery, ignoreCase = true) ||
                 it.identifier.contains(scannedQuery, ignoreCase = true) ||
-                it.id.contains(scannedQuery, ignoreCase = true)
+                it.id.toString().contains(scannedQuery, ignoreCase = true)
             }
         }
     }
@@ -148,10 +146,9 @@ fun QuickScannerModal(
                     value = scannedQuery,
                     onValueChange = { query ->
                         scannedQuery = query
-                        // Auto-match if exact ID scanned
                         val exactMatch = members.find {
                             it.identifier.equals(query.trim(), ignoreCase = true) ||
-                            it.id.equals(query.trim(), ignoreCase = true)
+                            it.id.toString() == query.trim()
                         }
                         if (exactMatch != null && query.isNotBlank()) {
                             val time = SimpleDateFormat("hh:mm:ss a", Locale.getDefault()).format(Date())
@@ -205,7 +202,7 @@ fun QuickScannerModal(
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Column {
                                     Text(
-                                        text = "${member.fullName} Checked In!",
+                                        text = "${member.name} Checked In!",
                                         fontWeight = FontWeight.Bold,
                                         color = StatusPresent,
                                         fontSize = 13.sp
@@ -264,7 +261,7 @@ fun QuickScannerModal(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = member.fullName.take(1),
+                                            text = member.name.take(1),
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 14.sp
                                         )
@@ -272,7 +269,7 @@ fun QuickScannerModal(
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Column {
                                         Text(
-                                            text = member.fullName,
+                                            text = member.name,
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.SemiBold
                                         )

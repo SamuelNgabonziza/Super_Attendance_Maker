@@ -1,66 +1,25 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.HowToReg
-import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.PendingActions
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.PieChart
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Today
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -70,18 +29,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.data.local.entity.ActivityLogEntity
-import com.example.data.local.entity.GroupEntity
-import com.example.ui.components.CategoryBadge
 import com.example.ui.components.EditProfileDialog
-import com.example.ui.components.MetricCard
-import com.example.ui.components.NewGroupDialog
 import com.example.ui.components.UserAvatar
-import com.example.ui.theme.EmeraldPresent
-import com.example.ui.theme.EmeraldPresentBg
-import com.example.ui.theme.EmeraldPresentText
-import com.example.ui.theme.IndigoExcused
-import com.example.ui.theme.PrimaryBlue
-import com.example.ui.theme.RoseAbsent
+import com.example.ui.theme.*
 import com.example.ui.viewmodel.AttendanceViewModel
 import com.example.ui.viewmodel.DashboardMetrics
 import java.text.SimpleDateFormat
@@ -93,6 +43,12 @@ import java.util.Locale
 fun HomeScreen(
     viewModel: AttendanceViewModel,
     onNavigateToGroup: (groupId: Long) -> Unit,
+    onNavigateToTakeAttendance: () -> Unit = {},
+    onNavigateToGroups: () -> Unit = {},
+    onNavigateToMetrics: () -> Unit = {},
+    onNavigateToAuditLogs: () -> Unit = {},
+    onNavigateToRecentActivity: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val userName by viewModel.userName.collectAsStateWithLifecycle()
@@ -101,8 +57,15 @@ fun HomeScreen(
     val groups by viewModel.allGroups.collectAsStateWithLifecycle()
     val recentActivities by viewModel.recentActivities.collectAsStateWithLifecycle()
     val allSessions by viewModel.allSessions.collectAsStateWithLifecycle()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
 
-    var showNewGroupDialog by remember { mutableStateOf(false) }
+    val systemInDark = isSystemInDarkTheme()
+    val isDark = when (themeMode) {
+        "DARK" -> true
+        "LIGHT" -> false
+        else -> systemInDark
+    }
+
     var showEditProfileDialog by remember { mutableStateOf(false) }
 
     val prettyDate = remember {
@@ -115,149 +78,176 @@ fun HomeScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showNewGroupDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = Color.White,
-                modifier = Modifier.testTag("fab_add_group")
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add Group")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "New Group", fontWeight = FontWeight.Bold)
-                }
-            }
-        }
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .testTag("home_screen_scroll"),
-            contentPadding = PaddingValues(bottom = 96.dp)
+            contentPadding = PaddingValues(bottom = 36.dp)
         ) {
-            // 1. Personalized Header
+            // 1. Personalized Header with Live Theme Toggle Quick Button
             item {
                 PersonalizedHeader(
                     userName = userName,
                     userRole = userRole,
                     date = prettyDate,
+                    isDark = isDark,
+                    themeMode = themeMode,
+                    onToggleTheme = { viewModel.toggleThemeMode() },
                     onEditProfile = { showEditProfileDialog = true }
                 )
             }
 
-            // 2. Hero Visual Banner Card
+            // 2. Hero Visual Banner Card (Kept visually intact with smart theme blending)
             item {
                 DashboardHeroBanner(
                     groupsCheckedToday = metrics.groupsCheckedInToday,
                     totalGroups = metrics.totalGroups,
                     rate = metrics.todayAttendanceRate,
-                    onTakeAttendance = {
-                        val firstPending = groups.firstOrNull { it.id !in todaySessionGroupIds }
-                        if (firstPending != null) {
-                            onNavigateToGroup(firstPending.id)
-                        } else if (groups.isNotEmpty()) {
-                            onNavigateToGroup(groups.first().id)
-                        } else {
-                            showNewGroupDialog = true
-                        }
-                    }
+                    isDark = isDark,
+                    onTakeAttendance = onNavigateToTakeAttendance
                 )
             }
 
-            // 3. Key Metrics Section
+            // Spacing
             item {
-                SectionHeader(title = "Key Attendance Metrics", subtitle = "Today's summary across all groups")
-                KeyMetricsGrid(metrics = metrics)
+                Spacer(modifier = Modifier.height(14.dp))
             }
 
-            // 4. Quick Action Row
+            // 3. Card 1: Take Attendance
             item {
-                QuickActionSection(
-                    onNewGroup = { showNewGroupDialog = true },
-                    onFirstGroupCheckIn = {
-                        if (groups.isNotEmpty()) {
-                            onNavigateToGroup(groups.first().id)
-                        } else {
-                            showNewGroupDialog = true
-                        }
-                    }
+                val pendingCount = groups.count { it.id !in todaySessionGroupIds }
+                val takeAttSub = if (groups.isEmpty()) {
+                    "No groups yet • Open to start"
+                } else if (pendingCount == 0) {
+                    "All ${groups.size} groups logged today!"
+                } else {
+                    "$pendingCount group${if (pendingCount == 1) "" else "s"} pending check-in"
+                }
+
+                InteractiveHubCard(
+                    title = "Take Attendance",
+                    summary = takeAttSub,
+                    badgeText = if (groups.isEmpty()) "Start" else if (pendingCount == 0) "Completed" else "$pendingCount Pending",
+                    badgeColor = if (pendingCount == 0 && groups.isNotEmpty()) {
+                        if (isDark) EmeraldPresentTextDark else EmeraldPresentText
+                    } else {
+                        if (isDark) Color(0xFF60A5FA) else Color(0xFF1D4ED8)
+                    },
+                    icon = Icons.Default.HowToReg,
+                    cardGradient = if (isDark) {
+                        listOf(Color(0xFF1E40AF), Color(0xFF1E3A8A))
+                    } else {
+                        listOf(Color(0xFF2563EB), Color(0xFF1D4ED8))
+                    },
+                    isDark = isDark,
+                    onClick = onNavigateToTakeAttendance,
+                    testTag = "hub_card_take_attendance"
                 )
             }
 
-            // 5. Groups Section
+            // 4. Card 2: Your Groups
             item {
-                SectionHeader(
+                val groupsSub = "${groups.size} active roster${if (groups.size == 1) "" else "s"} enrolled"
+                InteractiveHubCard(
                     title = "Your Groups",
-                    subtitle = "${groups.size} active roster${if (groups.size == 1) "" else "s"}",
-                    actionText = "+ Add",
-                    onAction = { showNewGroupDialog = true }
+                    summary = groupsSub,
+                    badgeText = "${groups.size} Groups",
+                    badgeColor = if (isDark) Color(0xFFC084FC) else Color(0xFF7C3AED),
+                    icon = Icons.Default.People,
+                    cardGradient = if (isDark) {
+                        listOf(Color(0xFF6B21A8), Color(0xFF581C87))
+                    } else {
+                        listOf(Color(0xFF7C3AED), Color(0xFF6D28D9))
+                    },
+                    isDark = isDark,
+                    onClick = onNavigateToGroups,
+                    testTag = "hub_card_your_groups"
                 )
             }
 
-            if (groups.isEmpty()) {
-                item {
-                    EmptyGroupsCard(onCreateGroup = { showNewGroupDialog = true })
-                }
-            } else {
-                items(groups, key = { "group_${it.id}" }) { group ->
-                    val isLoggedToday = group.id in todaySessionGroupIds
-                    GroupAttendanceCard(
-                        group = group,
-                        isLoggedToday = isLoggedToday,
-                        onClick = { onNavigateToGroup(group.id) }
-                    )
-                }
-            }
-
-            // 6. Recent Activity Updates Section
+            // 5. Card 3: Key Attendance Metrics
             item {
-                Spacer(modifier = Modifier.height(16.dp))
-                SectionHeader(
-                    title = "Recent Activity Updates",
-                    subtitle = "Real-time audit log of attendance and group changes"
+                val metricsSub = "${metrics.todayAttendanceRate}% attendance rate • ${metrics.todayPresentCount} present today"
+                InteractiveHubCard(
+                    title = "Key Attendance Metrics",
+                    summary = metricsSub,
+                    badgeText = "${metrics.todayAttendanceRate}% Rate",
+                    badgeColor = if (isDark) EmeraldPresentTextDark else EmeraldPresentText,
+                    icon = Icons.Default.PieChart,
+                    cardGradient = if (isDark) {
+                        listOf(Color(0xFF065F46), Color(0xFF064E3B))
+                    } else {
+                        listOf(Color(0xFF059669), Color(0xFF047857))
+                    },
+                    isDark = isDark,
+                    onClick = onNavigateToMetrics,
+                    testTag = "hub_card_key_metrics"
                 )
             }
 
-            if (recentActivities.isEmpty()) {
-                item {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            text = "No recent check-in activities yet. Open a group to start logging!",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
-                }
-            } else {
-                items(recentActivities, key = { "activity_${it.id}" }) { activity ->
-                    ActivityUpdateItem(activity = activity)
-                }
+            // 6. Card 4: Audit Logs
+            item {
+                val auditSub = "${recentActivities.size} recorded system & attendance events"
+                InteractiveHubCard(
+                    title = "Audit Logs",
+                    summary = auditSub,
+                    badgeText = "Security & Trail",
+                    badgeColor = if (isDark) AmberLateTextDark else Color(0xFFB45309),
+                    icon = Icons.AutoMirrored.Filled.ReceiptLong,
+                    cardGradient = if (isDark) {
+                        listOf(Color(0xFF92400E), Color(0xFF78350F))
+                    } else {
+                        listOf(Color(0xFFD97706), Color(0xFFB45309))
+                    },
+                    isDark = isDark,
+                    onClick = onNavigateToAuditLogs,
+                    testTag = "hub_card_audit_logs"
+                )
+            }
+
+            // 7. Card 5: Recent Activity Updates
+            item {
+                val lastActivityTitle = recentActivities.firstOrNull()?.title ?: "No updates yet"
+                val recentSub = if (recentActivities.isEmpty()) "Live stream of recent check-ins & roster changes" else "Latest: $lastActivityTitle"
+                InteractiveHubCard(
+                    title = "Recent Activity Updates",
+                    summary = recentSub,
+                    badgeText = "Live Updates",
+                    badgeColor = if (isDark) Color(0xFFD8B4FE) else Color(0xFF9333EA),
+                    icon = Icons.Default.NotificationsActive,
+                    cardGradient = if (isDark) {
+                        listOf(Color(0xFF7E22CE), Color(0xFF6B21A8))
+                    } else {
+                        listOf(Color(0xFF8B5CF6), Color(0xFF7C3AED))
+                    },
+                    isDark = isDark,
+                    onClick = onNavigateToRecentActivity,
+                    testTag = "hub_card_recent_activity"
+                )
+            }
+
+            // 8. Card 6: Settings & Management
+            item {
+                InteractiveHubCard(
+                    title = "Settings",
+                    summary = "Delete & add groups, manage members, edit roster & profile",
+                    badgeText = "Roster & Controls",
+                    badgeColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7),
+                    icon = Icons.Default.Settings,
+                    cardGradient = if (isDark) {
+                        listOf(Color(0xFF0369A1), Color(0xFF075985))
+                    } else {
+                        listOf(Color(0xFF0284C7), Color(0xFF0369A1))
+                    },
+                    isDark = isDark,
+                    onClick = onNavigateToSettings,
+                    testTag = "hub_card_settings"
+                )
             }
         }
-    }
-
-    if (showNewGroupDialog) {
-        NewGroupDialog(
-            onDismiss = { showNewGroupDialog = false },
-            onConfirm = { name, desc, category, colorHex ->
-                viewModel.createGroup(name, desc, category, colorHex) { newGroupId ->
-                    showNewGroupDialog = false
-                    onNavigateToGroup(newGroupId)
-                }
-            }
-        )
     }
 
     if (showEditProfileDialog) {
@@ -274,10 +264,129 @@ fun HomeScreen(
 }
 
 @Composable
+fun InteractiveHubCard(
+    title: String,
+    summary: String,
+    badgeText: String,
+    badgeColor: Color,
+    icon: ImageVector,
+    cardGradient: List<Color>,
+    isDark: Boolean,
+    onClick: () -> Unit,
+    testTag: String
+) {
+    val cardBg = if (isDark) {
+        MaterialTheme.colorScheme.surface
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
+    val cardBorder = if (isDark) {
+        BorderStroke(1.dp, Color(0xFF2E3D59))
+    } else {
+        BorderStroke(1.dp, Color(0xFFE2E8F0))
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 7.dp)
+            .clickable(onClick = onClick)
+            .testTag(testTag),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        border = cardBorder,
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 4.dp else 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Vibrant Icon Box with Gradient & dynamic shadow glow
+            Box(
+                modifier = Modifier
+                    .size(54.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Brush.linearGradient(cardGradient)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Text Info
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = badgeColor.copy(alpha = if (isDark) 0.22f else 0.12f)
+                ) {
+                    Text(
+                        text = badgeText,
+                        color = badgeColor,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Chevron Indicator
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "Open $title",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun PersonalizedHeader(
     userName: String,
     userRole: String,
     date: String,
+    isDark: Boolean,
+    themeMode: String,
+    onToggleTheme: () -> Unit,
     onEditProfile: () -> Unit
 ) {
     Surface(
@@ -329,12 +438,33 @@ fun PersonalizedHeader(
                 )
             }
 
-            UserAvatar(
-                name = userName,
-                colorHex = "#2563EB",
-                size = 46,
-                modifier = Modifier.clickable { onEditProfile() }
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Theme Toggle Quick Button
+                IconButton(
+                    onClick = onToggleTheme,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9))
+                        .testTag("theme_toggle_button")
+                ) {
+                    Icon(
+                        imageVector = if (isDark) Icons.Default.DarkMode else Icons.Default.LightMode,
+                        contentDescription = "Theme: $themeMode",
+                        tint = if (isDark) Color(0xFFFCD34D) else Color(0xFFD97706),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                UserAvatar(
+                    name = userName,
+                    colorHex = "#2563EB",
+                    size = 46,
+                    modifier = Modifier.clickable { onEditProfile() }
+                )
+            }
         }
     }
 }
@@ -344,6 +474,7 @@ fun DashboardHeroBanner(
     groupsCheckedToday: Int,
     totalGroups: Int,
     rate: Int,
+    isDark: Boolean,
     onTakeAttendance: () -> Unit
 ) {
     Card(
@@ -352,8 +483,11 @@ fun DashboardHeroBanner(
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .testTag("dashboard_hero_card"),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDark) Color(0xFF172554) else MaterialTheme.colorScheme.primaryContainer
+        ),
+        border = if (isDark) BorderStroke(1.dp, Color(0xFF1E3A8A)) else null,
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 4.dp else 2.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Box(
@@ -368,13 +502,17 @@ fun DashboardHeroBanner(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
-                // Soft gradient overlay to blend seamlessly
+                // Soft gradient overlay to blend seamlessly with theme
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color(0xCC0F172A))
+                                colors = if (isDark) {
+                                    listOf(Color.Transparent, Color(0xEE090D16))
+                                } else {
+                                    listOf(Color.Transparent, Color(0xCC0F172A))
+                                }
                             )
                         )
                 )
@@ -414,14 +552,14 @@ fun DashboardHeroBanner(
                         text = "Daily Roll Call & Check-in",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = if (isDark) Color(0xFFF8FAFC) else MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = if (totalGroups == 0) "Create your class or team roster to start."
                                else "Tap below to log attendance for your members.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        color = if (isDark) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                     )
                 }
 
@@ -442,424 +580,6 @@ fun DashboardHeroBanner(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(text = "Check-in", fontWeight = FontWeight.Bold)
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun KeyMetricsGrid(metrics: DashboardMetrics) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            MetricCard(
-                title = "Attendance Rate",
-                value = "${metrics.todayAttendanceRate}%",
-                subtitle = "Present or late today",
-                icon = Icons.Default.PieChart,
-                iconTint = EmeraldPresent,
-                modifier = Modifier.weight(1f)
-            )
-
-            MetricCard(
-                title = "Total Enrolled",
-                value = "${metrics.totalMembers}",
-                subtitle = "Across ${metrics.totalGroups} group${if (metrics.totalGroups == 1) "" else "s"}",
-                icon = Icons.Default.People,
-                iconTint = PrimaryBlue,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            MetricCard(
-                title = "Check-ins Today",
-                value = "${metrics.groupsCheckedInToday}/${metrics.totalGroups}",
-                subtitle = if (metrics.groupsCheckedInToday == metrics.totalGroups && metrics.totalGroups > 0) "All done today!" else "Groups recorded",
-                icon = Icons.Default.Today,
-                iconTint = Color(0xFF8B5CF6),
-                modifier = Modifier.weight(1f)
-            )
-
-            MetricCard(
-                title = "Present Today",
-                value = "${metrics.todayPresentCount}",
-                subtitle = "${metrics.todayAbsentCount} absent • ${metrics.todayLateCount} late",
-                icon = Icons.Default.CheckCircle,
-                iconTint = if (metrics.todayAbsentCount > 0) RoseAbsent else EmeraldPresent,
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
-@Composable
-fun QuickActionSection(
-    onNewGroup: () -> Unit,
-    onFirstGroupCheckIn: () -> Unit
-) {
-    LazyRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 16.dp, bottom = 4.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        item {
-            ActionChip(
-                icon = Icons.Default.Add,
-                label = "New Group",
-                onClick = onNewGroup,
-                testTag = "quick_action_new_group"
-            )
-        }
-        item {
-            ActionChip(
-                icon = Icons.Default.HowToReg,
-                label = "Take Attendance",
-                onClick = onFirstGroupCheckIn,
-                testTag = "quick_action_take_attendance"
-            )
-        }
-        item {
-            ActionChip(
-                icon = Icons.Default.History,
-                label = "Audit Logs",
-                onClick = onFirstGroupCheckIn,
-                testTag = "quick_action_audit_logs"
-            )
-        }
-    }
-}
-
-@Composable
-fun ActionChip(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    testTag: String
-) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
-        modifier = Modifier.testTag(testTag)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-        }
-    }
-}
-
-@Composable
-fun SectionHeader(
-    title: String,
-    subtitle: String,
-    actionText: String? = null,
-    onAction: (() -> Unit)? = null
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 18.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        if (actionText != null && onAction != null) {
-            Text(
-                text = actionText,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .clickable(onClick = onAction)
-                    .padding(8.dp)
-            )
-        }
-    }
-}
-
-@Composable
-fun GroupAttendanceCard(
-    group: GroupEntity,
-    isLoggedToday: Boolean,
-    onClick: () -> Unit
-) {
-    val barColor = try {
-        Color(android.graphics.Color.parseColor(group.colorHex))
-    } catch (e: Exception) {
-        MaterialTheme.colorScheme.primary
-    }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clickable(onClick = onClick)
-            .testTag("group_card_${group.id}"),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Group accent bar / indicator
-            Box(
-                modifier = Modifier
-                    .size(46.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(barColor.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Group,
-                    contentDescription = null,
-                    tint = barColor,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = group.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                if (group.description.isNotBlank()) {
-                    Text(
-                        text = group.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    CategoryBadge(category = group.category)
-
-                    if (isLoggedToday) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = EmeraldPresentBg
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = EmeraldPresentText,
-                                    modifier = Modifier.size(10.dp)
-                                )
-                                Spacer(modifier = Modifier.width(3.dp))
-                                Text(
-                                    text = "Logged Today",
-                                    color = EmeraldPresentText,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    } else {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
-                        ) {
-                            Text(
-                                text = "Pending Check-in",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = "Open Group",
-                tint = MaterialTheme.colorScheme.outline
-            )
-        }
-    }
-}
-
-@Composable
-fun EmptyGroupsCard(onCreateGroup: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = Icons.Default.Group,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(48.dp)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "No groups yet",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Create your first group to start logging daily attendance.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = onCreateGroup,
-                modifier = Modifier.testTag("empty_create_group_button")
-            ) {
-                Text("Create New Group")
-            }
-        }
-    }
-}
-
-@Composable
-fun ActivityUpdateItem(activity: ActivityLogEntity) {
-    val (icon, tint) = when (activity.type) {
-        "CHECK_IN" -> Pair(Icons.Default.HowToReg, EmeraldPresent)
-        "MEMBER_ADDED" -> Pair(Icons.Default.PersonAdd, PrimaryBlue)
-        "GROUP_CREATED" -> Pair(Icons.Default.Group, Color(0xFF7C3AED))
-        else -> Pair(Icons.Default.NotificationsActive, Color(0xFFF59E0B))
-    }
-
-    val timeAgo = remember(activity.timestamp) {
-        val diff = System.currentTimeMillis() - activity.timestamp
-        val minutes = diff / (1000 * 60)
-        val hours = minutes / 60
-        val days = hours / 24
-        when {
-            minutes < 1 -> "Just now"
-            minutes < 60 -> "${minutes}m ago"
-            hours < 24 -> "${hours}h ago"
-            else -> "${days}d ago"
-        }
-    }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(tint.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = tint,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = activity.title,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = timeAgo,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = activity.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
     }

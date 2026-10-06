@@ -24,16 +24,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.HowToReg
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Today
@@ -87,9 +91,14 @@ import com.example.data.local.entity.MemberEntity
 import com.example.ui.components.AddMemberDialog
 import com.example.ui.components.AttendanceSegmentedPicker
 import com.example.ui.components.AttendanceStatusBadge
+import com.example.ui.components.BatchImportDialog
 import com.example.ui.components.CategoryBadge
+import com.example.ui.components.DigitalIdCardDialog
 import com.example.ui.components.EditMemberDialog
 import com.example.ui.components.MemberNoteDialog
+import com.example.ui.components.QuickScannerModal
+import com.example.ui.components.RandomStudentPickerModal
+import com.example.ui.components.SessionAttendanceBarChart
 import com.example.ui.components.UserAvatar
 import com.example.ui.theme.AmberLate
 import com.example.ui.theme.AmberLateBg
@@ -143,6 +152,10 @@ fun GroupDetailScreen(
     var activeMemberForNote by remember { mutableStateOf<MemberEntity?>(null) }
     var memberToEdit by remember { mutableStateOf<MemberEntity?>(null) }
     var showMenu by remember { mutableStateOf(false) }
+    var showScannerModal by remember { mutableStateOf(false) }
+    var showRandomPickerModal by remember { mutableStateOf(false) }
+    var showBatchImportDialog by remember { mutableStateOf(false) }
+    var selectedMemberForIdCard by remember { mutableStateOf<MemberEntity?>(null) }
 
     // Quick Date Options
     val calendar = Calendar.getInstance()
@@ -198,6 +211,18 @@ fun GroupDetailScreen(
                 },
                 actions = {
                     IconButton(
+                        onClick = { showScannerModal = true },
+                        modifier = Modifier.testTag("btn_top_bar_scanner")
+                    ) {
+                        Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = "Quick QR Scanner")
+                    }
+                    IconButton(
+                        onClick = { showRandomPickerModal = true },
+                        modifier = Modifier.testTag("btn_top_bar_random_picker")
+                    ) {
+                        Icon(imageVector = Icons.Default.Casino, contentDescription = "Pick Random Student")
+                    }
+                    IconButton(
                         onClick = { showAddMemberDialog = true },
                         modifier = Modifier.testTag("btn_top_bar_add_person")
                     ) {
@@ -213,6 +238,36 @@ fun GroupDetailScreen(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
+                        DropdownMenuItem(
+                            text = { Text("Quick Scanner") },
+                            onClick = {
+                                showMenu = false
+                                showScannerModal = true
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Random Student Picker") },
+                            onClick = {
+                                showMenu = false
+                                showRandomPickerModal = true
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Casino, contentDescription = null)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Batch Import Members") },
+                            onClick = {
+                                showMenu = false
+                                showBatchImportDialog = true
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.GroupAdd, contentDescription = null)
+                            }
+                        )
                         DropdownMenuItem(
                             text = { Text("Add Person") },
                             onClick = {
@@ -353,12 +408,16 @@ fun GroupDetailScreen(
                     onOpenNoteDialog = { member -> activeMemberForNote = member },
                     onSessionNoteChange = { viewModel.setSessionNote(it) },
                     onMarkAll = { status -> viewModel.markAllAs(status) },
+                    onOpenScanner = { showScannerModal = true },
+                    onOpenRandomPicker = { showRandomPickerModal = true },
                     onAddMember = { showAddMemberDialog = true },
                     onEditMember = { memberToEdit = it }
                 )
                 1 -> MembersTabContent(
                     members = members,
                     onAddMember = { showAddMemberDialog = true },
+                    onBatchImport = { showBatchImportDialog = true },
+                    onViewIdCard = { selectedMemberForIdCard = it },
                     onEditMember = { memberToEdit = it },
                     onDeleteMember = { member ->
                         viewModel.deleteMember(member) {
@@ -461,6 +520,49 @@ fun GroupDetailScreen(
             }
         )
     }
+
+    if (showScannerModal) {
+        QuickScannerModal(
+            members = members,
+            onCheckInMember = { memberId, status, timeStr ->
+                viewModel.setMemberStatus(memberId, status)
+                coroutineScope.launch {
+                    val memberName = members.find { it.id == memberId }?.name ?: "Member"
+                    snackbarHostState.showSnackbar("Checked in $memberName as ${status.name} ($timeStr)")
+                }
+            },
+            onDismiss = { showScannerModal = false }
+        )
+    }
+
+    if (showRandomPickerModal) {
+        RandomStudentPickerModal(
+            members = members,
+            onDismiss = { showRandomPickerModal = false }
+        )
+    }
+
+    if (showBatchImportDialog) {
+        BatchImportDialog(
+            onDismiss = { showBatchImportDialog = false },
+            onImportMembers = { batchList ->
+                viewModel.batchAddMembers(batchList) {
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("Successfully imported ${batchList.size} students")
+                    }
+                }
+                showBatchImportDialog = false
+            }
+        )
+    }
+
+    selectedMemberForIdCard?.let { member ->
+        DigitalIdCardDialog(
+            member = member,
+            group = group,
+            onDismiss = { selectedMemberForIdCard = null }
+        )
+    }
 }
 
 @Composable
@@ -483,6 +585,8 @@ fun CheckInTabContent(
     onOpenNoteDialog: (MemberEntity) -> Unit,
     onSessionNoteChange: (String) -> Unit,
     onMarkAll: (AttendanceStatus) -> Unit,
+    onOpenScanner: () -> Unit = {},
+    onOpenRandomPicker: () -> Unit = {},
     onAddMember: () -> Unit,
     onEditMember: (MemberEntity) -> Unit = {}
 ) {
@@ -593,31 +697,59 @@ fun CheckInTabContent(
             }
         }
 
-        // 3. Quick Bulk Actions
+        // 3. Quick Bulk Actions & Fast Tools
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedButton(
                     onClick = { onMarkAll(AttendanceStatus.PRESENT) },
                     modifier = Modifier
-                        .weight(1f)
+                        .weight(1.1f)
                         .testTag("btn_mark_all_present"),
-                    shape = RoundedCornerShape(10.dp)
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
                 ) {
-                    Text("All Present", style = MaterialTheme.typography.labelMedium)
+                    Text("All Present", fontSize = 11.sp, maxLines = 1)
                 }
 
                 OutlinedButton(
                     onClick = { onMarkAll(AttendanceStatus.ABSENT) },
                     modifier = Modifier
-                        .weight(1f)
+                        .weight(1.1f)
                         .testTag("btn_mark_all_absent"),
-                    shape = RoundedCornerShape(10.dp)
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
                 ) {
-                    Text("All Absent", style = MaterialTheme.typography.labelMedium)
+                    Text("All Absent", fontSize = 11.sp, maxLines = 1)
+                }
+
+                OutlinedButton(
+                    onClick = onOpenScanner,
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("btn_quick_scan"),
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text("Scan", fontSize = 11.sp, maxLines = 1)
+                }
+
+                OutlinedButton(
+                    onClick = onOpenRandomPicker,
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("btn_random_picker"),
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Casino, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text("Pick", fontSize = 11.sp, maxLines = 1)
                 }
             }
         }
@@ -817,6 +949,8 @@ fun MemberCheckInCard(
 fun MembersTabContent(
     members: List<MemberEntity>,
     onAddMember: () -> Unit,
+    onBatchImport: () -> Unit,
+    onViewIdCard: (MemberEntity) -> Unit,
     onEditMember: (MemberEntity) -> Unit,
     onDeleteMember: (MemberEntity) -> Unit
 ) {
@@ -858,6 +992,20 @@ fun MembersTabContent(
                     singleLine = true
                 )
 
+                OutlinedButton(
+                    onClick = onBatchImport,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.testTag("btn_batch_import_in_tab")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.GroupAdd,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Import")
+                }
+
                 Button(
                     onClick = onAddMember,
                     shape = RoundedCornerShape(12.dp),
@@ -868,7 +1016,7 @@ fun MembersTabContent(
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text("Add")
                 }
             }
@@ -944,6 +1092,17 @@ fun MembersTabContent(
                                     maxLines = 1
                                 )
                             }
+                        }
+
+                        IconButton(
+                            onClick = { onViewIdCard(member) },
+                            modifier = Modifier.testTag("btn_id_card_${member.id}")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Badge,
+                                contentDescription = "Digital Pass for ${member.name}",
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
                         }
 
                         IconButton(
@@ -1040,6 +1199,13 @@ fun HistoryTabContent(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            item {
+                SessionAttendanceBarChart(
+                    sessions = sessions,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+            }
+
             items(sessions, key = { it.id }) { session ->
                 val rate = if (session.totalCount > 0) {
                     ((session.presentCount + session.lateCount) * 100) / session.totalCount

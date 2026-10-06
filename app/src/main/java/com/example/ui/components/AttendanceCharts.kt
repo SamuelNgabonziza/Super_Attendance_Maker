@@ -10,30 +10,22 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.model.AttendanceSession
-import com.example.data.model.AttendanceStatus
+import com.example.data.local.entity.AttendanceSessionEntity
 import com.example.ui.theme.StatusAbsent
-import com.example.ui.theme.StatusExcused
 import com.example.ui.theme.StatusLate
 import com.example.ui.theme.StatusPresent
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
 fun SessionAttendanceBarChart(
-    sessions: List<AttendanceSession>,
+    sessions: List<AttendanceSessionEntity>,
     modifier: Modifier = Modifier
 ) {
     if (sessions.isEmpty()) return
 
     val reversedSessions = sessions.take(7).reversed()
-    val sdf = SimpleDateFormat("MM/dd", Locale.getDefault())
 
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -79,10 +71,8 @@ fun SessionAttendanceBarChart(
                 )
 
                 reversedSessions.forEachIndexed { index, session ->
-                    val total = session.records.size.coerceAtLeast(1)
-                    val present = session.records.values.count { it.status == AttendanceStatus.PRESENT }
-                    val late = session.records.values.count { it.status == AttendanceStatus.LATE }
-                    val effectivePresent = present + (late * 0.75f)
+                    val total = session.totalCount.coerceAtLeast(1)
+                    val effectivePresent = session.presentCount + (session.lateCount * 0.75f)
                     val rate = (effectivePresent / total).coerceIn(0f, 1f)
 
                     val barHeight = chartHeight * rate
@@ -106,8 +96,8 @@ fun SessionAttendanceBarChart(
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx(), 6.dp.toPx())
                     )
 
-                    // Draw date label underneath
-                    val label = sdf.format(Date(session.dateMillis))
+                    // Draw date label underneath (last 5 chars e.g. "05-12" or "10-06")
+                    val label = if (session.date.length >= 5) session.date.takeLast(5) else session.date
                     drawContext.canvas.nativeCanvas.apply {
                         val paint = android.graphics.Paint().apply {
                             color = android.graphics.Color.GRAY

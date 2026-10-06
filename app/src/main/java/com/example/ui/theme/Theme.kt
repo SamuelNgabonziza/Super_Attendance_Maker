@@ -13,38 +13,46 @@ import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
     primary = AccentCyan,
-    onPrimary = LightSurface,
-    primaryContainer = PrimaryBlueDark,
-    onPrimaryContainer = DarkTextPrimary,
+    onPrimary = Color(0xFF0F172A),
+    primaryContainer = DarkPrimaryContainer,
+    onPrimaryContainer = DarkOnPrimaryContainer,
     secondary = SecondaryTeal,
-    onSecondary = LightSurface,
+    onSecondary = Color(0xFF0F172A),
+    secondaryContainer = Color(0xFF1E293B),
+    onSecondaryContainer = Color(0xFFE2E8F0),
     background = DarkBackground,
     onBackground = DarkTextPrimary,
     surface = DarkSurface,
     onSurface = DarkTextPrimary,
     surfaceVariant = DarkSurfaceVariant,
-    onSurfaceVariant = DarkTextSecondary
+    onSurfaceVariant = DarkTextSecondary,
+    outline = DarkOutline,
+    outlineVariant = Color(0xFF1E293B)
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = PrimaryBlue,
-    onPrimary = LightSurface,
-    primaryContainer = Color(0xFFDBEAFE),
-    onPrimaryContainer = PrimaryBlueDark,
+    onPrimary = Color.White,
+    primaryContainer = LightPrimaryContainer,
+    onPrimaryContainer = LightOnPrimaryContainer,
     secondary = SecondaryTeal,
-    onSecondary = LightSurface,
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFF1F5F9),
+    onSecondaryContainer = Color(0xFF1E293B),
     background = LightBackground,
     onBackground = LightTextPrimary,
     surface = LightSurface,
     onSurface = LightTextPrimary,
     surfaceVariant = LightSurfaceVariant,
-    onSurfaceVariant = LightTextSecondary
+    onSurfaceVariant = LightTextSecondary,
+    outline = LightOutline,
+    outlineVariant = Color(0xFFE2E8F0)
 )
 
 @Composable
 fun AttendEaseTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false, // Set to false by default so our custom, polished AttendEase light & dark designs are always visible and distinct
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

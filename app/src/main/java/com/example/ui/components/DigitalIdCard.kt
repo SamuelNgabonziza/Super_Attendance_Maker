@@ -22,8 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.example.data.model.Group
-import com.example.data.model.Member
+import com.example.data.local.entity.GroupEntity
+import com.example.data.local.entity.MemberEntity
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -31,8 +31,8 @@ import kotlin.math.abs
 
 @Composable
 fun DigitalIdCardDialog(
-    member: Member,
-    group: Group?,
+    member: MemberEntity,
+    group: GroupEntity?,
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
@@ -120,7 +120,7 @@ fun DigitalIdCardDialog(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = member.fullName.take(2).uppercase(),
+                                    text = member.name.take(2).uppercase(),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 22.sp,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -136,7 +136,7 @@ fun DigitalIdCardDialog(
                                 .padding(horizontal = 16.dp)
                         ) {
                             Text(
-                                text = member.fullName,
+                                text = member.name,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -150,7 +150,7 @@ fun DigitalIdCardDialog(
                                 )
                             }
                             Text(
-                                text = "${member.role} • ${group?.name ?: "Group"}",
+                                text = "Member • ${group?.name ?: "Group"}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -166,7 +166,7 @@ fun DigitalIdCardDialog(
                                     .border(1.dp, Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                             ) {
                                 QrMatrixCanvas(
-                                    data = "${member.id}:${member.identifier}:${member.fullName}",
+                                    data = "${member.id}:${member.identifier}:${member.name}",
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .padding(12.dp)
@@ -214,17 +214,13 @@ fun QrMatrixCanvas(data: String, modifier: Modifier = Modifier) {
         drawRect(Color.White)
 
         fun isFinderPattern(r: Int, c: Int): Boolean {
-            // Top-left
             if (r in 0..6 && c in 0..6) return true
-            // Top-right
             if (r in 0..6 && c in (gridSize - 7) until gridSize) return true
-            // Bottom-left
             if (r in (gridSize - 7) until gridSize && c in 0..6) return true
             return false
         }
 
         fun drawFinder(startR: Int, startC: Int) {
-            // Outer 7x7
             for (r in 0..6) {
                 for (c in 0..6) {
                     val isBorder = r == 0 || r == 6 || c == 0 || c == 6

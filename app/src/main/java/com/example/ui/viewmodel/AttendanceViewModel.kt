@@ -60,6 +60,23 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     val todayString: String = dateFormat.format(Date())
 
+    // Theme Mode: "SYSTEM", "LIGHT", "DARK"
+    private val _themeMode = MutableStateFlow("SYSTEM")
+    val themeMode: StateFlow<String> = _themeMode.asStateFlow()
+
+    fun setThemeMode(mode: String) {
+        _themeMode.value = mode
+    }
+
+    fun toggleThemeMode() {
+        _themeMode.value = when (_themeMode.value) {
+            "SYSTEM" -> "DARK"
+            "DARK" -> "LIGHT"
+            "LIGHT" -> "SYSTEM"
+            else -> "SYSTEM"
+        }
+    }
+
     // Personalized User Profile
     private val _userName = MutableStateFlow("Samuel Prosper")
     val userName: StateFlow<String> = _userName.asStateFlow()
@@ -312,6 +329,29 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
             loadGroupData(groupId, _selectedDate.value)
             onSuccess?.let { cb ->
                 launch(Dispatchers.Main) { cb(id) }
+            }
+        }
+    }
+
+    fun batchAddMembers(
+        membersData: List<Triple<String, String, String>>,
+        onSuccess: (() -> Unit)? = null
+    ) {
+        val groupId = _selectedGroupId.value ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val colors = listOf("#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4")
+            val entities = membersData.mapIndexed { idx, (name, id, _) ->
+                MemberEntity(
+                    groupId = groupId,
+                    name = name,
+                    identifier = id,
+                    avatarColorHex = colors[idx % colors.size]
+                )
+            }
+            repository.insertMembers(entities)
+            loadGroupData(groupId, _selectedDate.value)
+            onSuccess?.let { cb ->
+                launch(Dispatchers.Main) { cb() }
             }
         }
     }
