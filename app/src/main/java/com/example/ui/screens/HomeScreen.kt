@@ -96,7 +96,8 @@ fun HomeScreen(
                     isDark = isDark,
                     themeMode = themeMode,
                     onToggleTheme = { viewModel.toggleThemeMode() },
-                    onEditProfile = { showEditProfileDialog = true }
+                    onEditProfile = { showEditProfileDialog = true },
+                    onOpenSettings = onNavigateToSettings
                 )
             }
 
@@ -387,7 +388,8 @@ fun PersonalizedHeader(
     isDark: Boolean,
     themeMode: String,
     onToggleTheme: () -> Unit,
-    onEditProfile: () -> Unit
+    onEditProfile: () -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -439,6 +441,25 @@ fun PersonalizedHeader(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // Settings Quick Button
+                IconButton(
+                    onClick = onOpenSettings,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9))
+                        .testTag("settings_button_header")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
                 // Theme Toggle Quick Button
                 IconButton(
                     onClick = onToggleTheme,
@@ -456,13 +477,13 @@ fun PersonalizedHeader(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(8.dp))
 
                 UserAvatar(
                     name = userName,
                     colorHex = "#2563EB",
                     size = 46,
-                    modifier = Modifier.clickable { onEditProfile() }
+                    modifier = Modifier.clickable { onOpenSettings() }
                 )
             }
         }

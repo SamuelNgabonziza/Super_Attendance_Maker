@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.HowToReg
@@ -40,6 +41,7 @@ import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -49,6 +51,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -95,6 +98,7 @@ import com.example.ui.components.BatchImportDialog
 import com.example.ui.components.CategoryBadge
 import com.example.ui.components.DigitalIdCardDialog
 import com.example.ui.components.EditMemberDialog
+import com.example.ui.components.ExportCsvDialog
 import com.example.ui.components.MemberNoteDialog
 import com.example.ui.components.QuickScannerModal
 import com.example.ui.components.RandomStudentPickerModal
@@ -144,11 +148,14 @@ fun GroupDetailScreen(
     val isSessionSavedToday by viewModel.isSessionSavedToday.collectAsStateWithLifecycle()
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
 
+    val groupRecords by viewModel.getRecordsForGroupFlow(groupId).collectAsStateWithLifecycle(initialValue = emptyList<com.example.data.local.entity.AttendanceRecordEntity>())
+
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabTitles = listOf("Check-in", "Members (${members.size})", "History (${sessions.size})")
 
     var showAddMemberDialog by remember { mutableStateOf(false) }
     var showDeleteGroupDialog by remember { mutableStateOf(false) }
+    var showExportCsvDialog by remember { mutableStateOf(false) }
     var activeMemberForNote by remember { mutableStateOf<MemberEntity?>(null) }
     var memberToEdit by remember { mutableStateOf<MemberEntity?>(null) }
     var showMenu by remember { mutableStateOf(false) }
@@ -211,6 +218,12 @@ fun GroupDetailScreen(
                 },
                 actions = {
                     IconButton(
+                        onClick = { showExportCsvDialog = true },
+                        modifier = Modifier.testTag("btn_top_bar_export_csv")
+                    ) {
+                        Icon(imageVector = Icons.Default.FileDownload, contentDescription = "Export Attendance CSV")
+                    }
+                    IconButton(
                         onClick = { showScannerModal = true },
                         modifier = Modifier.testTag("btn_top_bar_scanner")
                     ) {
@@ -238,6 +251,16 @@ fun GroupDetailScreen(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
+                        DropdownMenuItem(
+                            text = { Text("Export Attendance (CSV)") },
+                            onClick = {
+                                showMenu = false
+                                showExportCsvDialog = true
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.TableChart, contentDescription = null)
+                            }
+                        )
                         DropdownMenuItem(
                             text = { Text("Quick Scanner") },
                             onClick = {
@@ -440,10 +463,21 @@ fun GroupDetailScreen(
                             }
                             context.startActivity(Intent.createChooser(sendIntent, "Share Attendance Report"))
                         }
-                    }
+                    },
+                    onExportCsv = { showExportCsvDialog = true }
                 )
             }
         }
+    }
+
+    if (showExportCsvDialog && group != null) {
+        ExportCsvDialog(
+            group = group!!,
+            members = members,
+            sessions = sessions,
+            records = groupRecords,
+            onDismissRequest = { showExportCsvDialog = false }
+        )
     }
 
     if (showAddMemberDialog) {
@@ -1161,7 +1195,8 @@ fun MembersTabContent(
 fun HistoryTabContent(
     group: GroupEntity?,
     sessions: List<AttendanceSessionEntity>,
-    onShareSession: (AttendanceSessionEntity) -> Unit
+    onShareSession: (AttendanceSessionEntity) -> Unit,
+    onExportCsv: () -> Unit
 ) {
     if (sessions.isEmpty()) {
         Box(
@@ -1189,6 +1224,16 @@ fun HistoryTabContent(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = onExportCsv,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.testTag("btn_empty_history_export")
+                ) {
+                    Icon(imageVector = Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Export Roster CSV")
+                }
             }
         }
     } else {
@@ -1204,6 +1249,72 @@ fun HistoryTabContent(
                     sessions = sessions,
                     modifier = Modifier.padding(bottom = 6.dp)
                 )
+            }
+
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onExportCsv() }
+                        .testTag("card_history_export_csv"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.primary),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FileDownload,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Export Attendance CSV",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Download or share complete spreadsheet logs",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        FilledTonalButton(
+                            onClick = onExportCsv,
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                        ) {
+                            Text("Export", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
 
             items(sessions, key = { it.id }) { session ->

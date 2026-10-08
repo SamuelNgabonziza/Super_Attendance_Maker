@@ -3,6 +3,7 @@ package com.example.ui.screens
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -25,10 +26,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.local.entity.AttendanceRecordEntity
+import com.example.data.local.entity.AttendanceSessionEntity
 import com.example.data.local.entity.GroupEntity
 import com.example.data.local.entity.MemberEntity
 import com.example.ui.components.AddMemberDialog
 import com.example.ui.components.EditProfileDialog
+import com.example.ui.components.ExportCsvDialog
 import com.example.ui.components.NewGroupDialog
 import com.example.ui.components.UserAvatar
 import com.example.ui.theme.*
@@ -59,6 +63,11 @@ fun SettingsScreen(
     var groupForAddingMember by remember { mutableStateOf<GroupEntity?>(null) }
     var groupToDelete by remember { mutableStateOf<GroupEntity?>(null) }
     var memberToDelete by remember { mutableStateOf<Pair<GroupEntity, MemberEntity>?>(null) }
+
+    var groupForExportCsv by remember { mutableStateOf<GroupEntity?>(null) }
+    var exportGroupMembers by remember { mutableStateOf<List<MemberEntity>>(emptyList()) }
+    var exportGroupSessions by remember { mutableStateOf<List<AttendanceSessionEntity>>(emptyList()) }
+    var exportGroupRecords by remember { mutableStateOf<List<AttendanceRecordEntity>>(emptyList()) }
 
     // Expanded group state for managing members inside settings
     var expandedGroupId by remember { mutableStateOf<Long?>(null) }
@@ -337,6 +346,26 @@ fun SettingsScreen(
                                     )
                                 }
 
+                                // Quick Export CSV Action
+                                IconButton(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            val (_, members, sessionsAndRecords) = viewModel.getGroupExportData(group.id)
+                                            exportGroupMembers = members
+                                            exportGroupSessions = sessionsAndRecords.first
+                                            exportGroupRecords = sessionsAndRecords.second
+                                            groupForExportCsv = group
+                                        }
+                                    },
+                                    modifier = Modifier.testTag("btn_export_group_${group.id}")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.FileDownload,
+                                        contentDescription = "Export CSV for ${group.name}",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+
                                 // Quick Delete Group Action
                                 IconButton(
                                     onClick = { groupToDelete = group },
@@ -488,6 +517,130 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            // Section 4: Data Export & Reporting
+            item {
+                Text(
+                    text = "DATA EXPORT & REPORTING",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 1.sp
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.TableChart,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Export Attendance (CSV)",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Generate and share CSV files for reporting and analysis",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        if (groups.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text(
+                                text = "Select group roster to export:",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            groups.forEach { grp ->
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .clickable {
+                                            coroutineScope.launch {
+                                                val (_, members, sessionsAndRecords) = viewModel.getGroupExportData(grp.id)
+                                                exportGroupMembers = members
+                                                exportGroupSessions = sessionsAndRecords.first
+                                                exportGroupRecords = sessionsAndRecords.second
+                                                groupForExportCsv = grp
+                                            }
+                                        },
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = grp.name,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = grp.category,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = "Export CSV",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Icon(
+                                                imageVector = Icons.Default.FileDownload,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = "Create groups and record roll call to export CSV attendance reports.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -589,6 +742,17 @@ fun SettingsScreen(
                     Text("Cancel")
                 }
             }
+        )
+    }
+
+    // Dialog 6: Export CSV Dialog
+    groupForExportCsv?.let { grp ->
+        ExportCsvDialog(
+            group = grp,
+            members = exportGroupMembers,
+            sessions = exportGroupSessions,
+            records = exportGroupRecords,
+            onDismissRequest = { groupForExportCsv = null }
         )
     }
 }

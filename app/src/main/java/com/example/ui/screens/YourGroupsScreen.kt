@@ -1,6 +1,9 @@
 package com.example.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,23 +13,32 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.local.entity.AttendanceRecordEntity
+import com.example.data.local.entity.AttendanceSessionEntity
 import com.example.data.local.entity.GroupEntity
+import com.example.data.local.entity.MemberEntity
 import com.example.ui.components.EmptyGroupsCard
+import com.example.ui.components.ExportCsvDialog
 import com.example.ui.components.GroupAttendanceCard
 import com.example.ui.components.NewGroupDialog
 import com.example.ui.viewmodel.AttendanceViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,14 +48,35 @@ fun YourGroupsScreen(
     onNavigateToGroup: (groupId: Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    BackHandler(onBack = onNavigateBack)
-
     val groups by viewModel.allGroups.collectAsStateWithLifecycle()
     val allSessions by viewModel.allSessions.collectAsStateWithLifecycle()
 
+    val coroutineScope = rememberCoroutineScope()
     var showNewGroupDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
+    var isTopSearchActive by remember { mutableStateOf(false) }
+    val searchFocusRequester = remember { FocusRequester() }
+
+    var groupToExportCsv by remember { mutableStateOf<GroupEntity?>(null) }
+    var exportGroupMembers by remember { mutableStateOf<List<MemberEntity>>(emptyList()) }
+    var exportGroupSessions by remember { mutableStateOf<List<AttendanceSessionEntity>>(emptyList()) }
+    var exportGroupRecords by remember { mutableStateOf<List<AttendanceRecordEntity>>(emptyList()) }
+
+    BackHandler {
+        if (isTopSearchActive || searchQuery.isNotEmpty()) {
+            isTopSearchActive = false
+            searchQuery = ""
+        } else {
+            onNavigateBack()
+        }
+    }
+
+    LaunchedEffect(isTopSearchActive) {
+        if (isTopSearchActive) {
+            searchFocusRequester.requestFocus()
+        }
+    }
 
     val todaySessionGroupIds = remember(allSessions) {
         allSessions.filter { it.date == viewModel.todayString }.map { it.groupId }.toSet()
@@ -67,31 +100,101 @@ fun YourGroupsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text(
-                            text = "Your Groups",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                    if (isTopSearchActive) {
+                        TextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = {
+                                Text(
+                                    "Search groups by name...",
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            },
+                            singleLine = true,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                disabledContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            ),
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(
+                                        onClick = { searchQuery = "" },
+                                        modifier = Modifier.testTag("btn_clear_top_search")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Clear,
+                                            contentDescription = "Clear search"
+                                        )
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(searchFocusRequester)
+                                .testTag("top_app_bar_search_input")
                         )
-                        Text(
-                            text = "${groups.size} active roster${if (groups.size == 1) "" else "s"}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    } else {
+                        Column {
+                            Text(
+                                text = "Your Groups",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "${groups.size} active roster${if (groups.size == 1) "" else "s"}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 },
                 navigationIcon = {
                     IconButton(
-                        onClick = onNavigateBack,
+                        onClick = {
+                            if (isTopSearchActive) {
+                                isTopSearchActive = false
+                                searchQuery = ""
+                            } else {
+                                onNavigateBack()
+                            }
+                        },
                         modifier = Modifier.testTag("btn_back_groups")
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back to Home"
+                            contentDescription = if (isTopSearchActive) "Close Search" else "Back to Home"
                         )
                     }
                 },
                 actions = {
+                    if (!isTopSearchActive) {
+                        IconButton(
+                            onClick = { isTopSearchActive = true },
+                            modifier = Modifier.testTag("btn_toggle_top_search")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search Groups"
+                            )
+                        }
+                    } else {
+                        IconButton(
+                            onClick = {
+                                isTopSearchActive = false
+                                searchQuery = ""
+                            },
+                            modifier = Modifier.testTag("btn_close_top_search")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close Search"
+                            )
+                        }
+                    }
+
                     Button(
                         onClick = { showNewGroupDialog = true },
                         shape = RoundedCornerShape(12.dp),
@@ -134,7 +237,7 @@ fun YourGroupsScreen(
                 .testTag("groups_screen_list"),
             contentPadding = PaddingValues(bottom = 96.dp)
         ) {
-            // Search Input
+            // Prominent persistent Search Bar at top of content
             item {
                 OutlinedTextField(
                     value = searchQuery,
@@ -142,6 +245,19 @@ fun YourGroupsScreen(
                     placeholder = { Text("Search groups by name...") },
                     leadingIcon = {
                         Icon(imageVector = Icons.Default.Search, contentDescription = null)
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(
+                                onClick = { searchQuery = "" },
+                                modifier = Modifier.testTag("btn_clear_search")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "Clear search text"
+                                )
+                            }
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -222,10 +338,69 @@ fun YourGroupsScreen(
                 }
             }
 
+            // Search results counter or empty notification
+            if (searchQuery.isNotBlank()) {
+                item {
+                    Text(
+                        text = "Found ${filteredGroups.size} group${if (filteredGroups.size == 1) "" else "s"} matching \"$searchQuery\"",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
             // Groups listing
             if (filteredGroups.isEmpty()) {
                 item {
-                    EmptyGroupsCard(onCreateGroup = { showNewGroupDialog = true })
+                    if (searchQuery.isNotBlank() || selectedCategory != "All") {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.outline,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "No groups matching \"$searchQuery\"",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Check the spelling or try clearing the search filter.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(
+                                    onClick = {
+                                        searchQuery = ""
+                                        selectedCategory = "All"
+                                    },
+                                    modifier = Modifier.testTag("btn_clear_filters")
+                                ) {
+                                    Text("Clear Filters")
+                                }
+                            }
+                        }
+                    } else {
+                        EmptyGroupsCard(onCreateGroup = { showNewGroupDialog = true })
+                    }
                 }
             } else {
                 items(filteredGroups, key = { "group_item_${it.id}" }) { group ->
@@ -233,11 +408,30 @@ fun YourGroupsScreen(
                     GroupAttendanceCard(
                         group = group,
                         isLoggedToday = isLoggedToday,
-                        onClick = { onNavigateToGroup(group.id) }
+                        onClick = { onNavigateToGroup(group.id) },
+                        onExportCsv = {
+                            coroutineScope.launch {
+                                val (_, members, sessionsAndRecords) = viewModel.getGroupExportData(group.id)
+                                exportGroupMembers = members
+                                exportGroupSessions = sessionsAndRecords.first
+                                exportGroupRecords = sessionsAndRecords.second
+                                groupToExportCsv = group
+                            }
+                        }
                     )
                 }
             }
         }
+    }
+
+    groupToExportCsv?.let { grp ->
+        ExportCsvDialog(
+            group = grp,
+            members = exportGroupMembers,
+            sessions = exportGroupSessions,
+            records = exportGroupRecords,
+            onDismissRequest = { groupToExportCsv = null }
+        )
     }
 
     if (showNewGroupDialog) {

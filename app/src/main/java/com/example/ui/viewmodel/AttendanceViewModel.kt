@@ -11,6 +11,7 @@ import com.example.data.local.entity.GroupEntity
 import com.example.data.local.entity.MemberEntity
 import com.example.data.repository.AttendanceRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -402,5 +403,18 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
             }
             appendLine("\nGenerated via AttendEase")
         }
+    }
+
+    fun getRecordsForGroupFlow(groupId: Long): Flow<List<com.example.data.local.entity.AttendanceRecordEntity>> =
+        repository.getRecordsForGroupFlow(groupId)
+
+    suspend fun getGroupExportData(
+        groupId: Long
+    ): Triple<GroupEntity?, List<MemberEntity>, Pair<List<AttendanceSessionEntity>, List<com.example.data.local.entity.AttendanceRecordEntity>>> {
+        val group = repository.getGroupById(groupId)
+        val members = repository.getMembersForGroup(groupId)
+        val sessions = repository.getSessionsForGroup(groupId)
+        val records = repository.getRecordsForGroup(groupId)
+        return Triple(group, members, Pair(sessions, records))
     }
 }

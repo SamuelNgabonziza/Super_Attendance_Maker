@@ -39,6 +39,15 @@ class AttendanceRepository(
     suspend fun getRecordsForSession(sessionId: Long): List<AttendanceRecordEntity> =
         recordDao.getRecordsForSession(sessionId)
 
+    fun getRecordsForGroupFlow(groupId: Long): Flow<List<AttendanceRecordEntity>> =
+        recordDao.getRecordsForGroupFlow(groupId)
+
+    suspend fun getRecordsForGroup(groupId: Long): List<AttendanceRecordEntity> =
+        recordDao.getRecordsForGroupFlow(groupId).first()
+
+    suspend fun getSessionsForGroup(groupId: Long): List<AttendanceSessionEntity> =
+        dao.getSessionsForGroupFlow(groupId).first()
+
     fun getSessionsForGroupFlow(groupId: Long): Flow<List<AttendanceSessionEntity>> =
         dao.getSessionsForGroupFlow(groupId)
 

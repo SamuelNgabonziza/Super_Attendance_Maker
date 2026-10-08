@@ -19,12 +19,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -292,7 +294,8 @@ private fun StatusButton(
 fun GroupAttendanceCard(
     group: com.example.data.local.entity.GroupEntity,
     isLoggedToday: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onExportCsv: (() -> Unit)? = null
 ) {
     val barColor = try {
         Color(android.graphics.Color.parseColor(group.colorHex))
@@ -397,6 +400,19 @@ fun GroupAttendanceCard(
                             )
                         }
                     }
+                }
+            }
+
+            if (onExportCsv != null) {
+                IconButton(
+                    onClick = onExportCsv,
+                    modifier = Modifier.testTag("btn_export_group_${group.id}")
+                ) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.FileDownload,
+                        contentDescription = "Export CSV",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
 
