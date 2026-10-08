@@ -60,6 +60,7 @@ fun SettingsScreen(
 
     var showEditProfileDialog by remember { mutableStateOf(false) }
     var showNewGroupDialog by remember { mutableStateOf(false) }
+    var showResetDemoDialog by remember { mutableStateOf(false) }
     var groupForAddingMember by remember { mutableStateOf<GroupEntity?>(null) }
     var groupToDelete by remember { mutableStateOf<GroupEntity?>(null) }
     var memberToDelete by remember { mutableStateOf<Pair<GroupEntity, MemberEntity>?>(null) }
@@ -641,6 +642,103 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            // Section 4: Data Management & Reset
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF2E3D59) else Color(0xFFE2E8F0))
+                ) {
+                    Column(modifier = Modifier.padding(18.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Restore,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "Sample Data & Demo Reset",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Reset all rosters to default sample data (CS401, Biology, Design, Track & Athletics with attendance history).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        OutlinedButton(
+                            onClick = { showResetDemoDialog = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("btn_reset_sample_data")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Reset To Demo Rosters")
+                        }
+                    }
+                }
+            }
+
+            // Section 5: App Version & Build Information
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .testTag("app_version_card"),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "AttendEase",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Version 2.0 (Build 2) • Modern Hub UI",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer
+                        ) {
+                            Text(
+                                text = "v2.0",
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -753,6 +851,34 @@ fun SettingsScreen(
             sessions = exportGroupSessions,
             records = exportGroupRecords,
             onDismissRequest = { groupForExportCsv = null }
+        )
+    }
+
+    // Dialog 7: Reset Demo Data Dialog
+    if (showResetDemoDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDemoDialog = false },
+            title = { Text("Reset to Demo Rosters?") },
+            text = { Text("This will clear any local groups and reload the official sample academic rosters with fresh check-in logs.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.resetToDefaultDemoData {
+                            showResetDemoDialog = false
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("Sample rosters & attendance data reloaded!")
+                            }
+                        }
+                    }
+                ) {
+                    Text("Confirm Reset")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showResetDemoDialog = false }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 }

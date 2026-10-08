@@ -417,4 +417,15 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
         val records = repository.getRecordsForGroup(groupId)
         return Triple(group, members, Pair(sessions, records))
     }
+
+    fun resetToDefaultDemoData(onSuccess: (() -> Unit)? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val db = AppDatabase.getInstance(getApplication())
+            db.clearAllTables()
+            repository.seedSampleDataIfEmpty()
+            onSuccess?.let { cb ->
+                launch(Dispatchers.Main) { cb() }
+            }
+        }
+    }
 }
