@@ -584,7 +584,7 @@ private fun RollCallForGroupView(
                     ) {
                         Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(3.dp))
-                        Text("+ Member", fontSize = 11.sp, maxLines = 1)
+                        Text("Add Member...", fontSize = 11.sp, maxLines = 1)
                     }
                 }
             }

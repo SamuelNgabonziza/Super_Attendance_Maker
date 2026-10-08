@@ -234,8 +234,8 @@ fun HomeScreen(
             item {
                 InteractiveHubCard(
                     title = "Settings",
-                    summary = "Delete & add groups, manage members, edit roster & profile",
-                    badgeText = "Roster & Controls",
+                    summary = "Delete groups, export data reports, demo reset & profile",
+                    badgeText = "Settings & Export",
                     badgeColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7),
                     icon = Icons.Default.Settings,
                     cardGradient = if (isDark) {
@@ -448,11 +448,6 @@ fun PersonalizedHeader(
                         )
                     }
                 }
-                Text(
-                    text = userRole,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -579,43 +574,24 @@ fun DashboardHeroBanner(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .clickable { onTakeAttendance() }
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
+                    .testTag("hero_take_attendance_button"),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Daily Roll Call & Check-in",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isDark) Color(0xFFF8FAFC) else MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = if (totalGroups == 0) "Create your class or team roster to start."
-                               else "Tap below to log attendance for your members.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (isDark) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                    )
-                }
-
-                Button(
-                    onClick = onTakeAttendance,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.testTag("hero_take_attendance_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.HowToReg,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "Check-in", fontWeight = FontWeight.Bold)
-                }
+                Text(
+                    text = "Daily Roll Call & Check-In",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDark) Color(0xFFF8FAFC) else MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "Take Attendance",
+                    tint = if (isDark) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                    modifier = Modifier.size(22.dp)
+                )
             }
         }
     }

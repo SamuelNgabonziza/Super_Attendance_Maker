@@ -137,17 +137,21 @@ fun YourGroupsScreen(
                                 .testTag("top_app_bar_search_input")
                         )
                     } else {
-                        Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = "Your Groups",
                                 style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
                             )
-                            Text(
-                                text = "${groups.size} active roster${if (groups.size == 1) "" else "s"}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            if (groups.isNotEmpty()) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "(${groups.size})",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 },
@@ -193,19 +197,6 @@ fun YourGroupsScreen(
                                 contentDescription = "Close Search"
                             )
                         }
-                    }
-
-                    Button(
-                        onClick = { showNewGroupDialog = true },
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .testTag("btn_top_bar_new_group")
-                    ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "New Group", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -282,56 +273,6 @@ fun YourGroupsScreen(
                                 onClick = { selectedCategory = category },
                                 label = { Text(category) },
                                 shape = RoundedCornerShape(10.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Prominent "Create New Group" action card at the top
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clickable { showNewGroupDialog = true }
-                        .testTag("card_action_create_group"),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)),
-                    border = CardDefaults.outlinedCardBorder()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(44.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Create a New Group",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Text(
-                                text = "Add a class, lab, team, or workshop roster",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                             )
                         }
                     }
